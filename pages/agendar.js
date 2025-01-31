@@ -81,6 +81,13 @@ export default function Agendar({ horarios, servicos }) {
           slidesToShow: 3,
           slidesToScroll: 3,
         }
+      },
+      {
+        breakpoint: 480,
+        settings: {
+          slidesToShow: 2,
+          slidesToScroll: 2,
+        }
       }
     ]
   };
@@ -118,20 +125,20 @@ export default function Agendar({ horarios, servicos }) {
   const datasOrdenadas = ordenarDatas([...new Set(horariosDisponiveis.map(h => new Date(h.data).toDateString()))]);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-xl">
+    <div className="max-w-2xl mx-auto p-4 bg-white shadow-lg rounded-xl">
       <h1 className="text-2xl font-bold text-gray-800 text-center mb-4">Agendar Horário</h1>
 
       {/* Seleção de Serviço */}
       <div className="mb-4">
         <h2 className="text-lg font-semibold mb-2">Selecione um Serviço</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {servicos.map(servico => (
             <div
               key={servico._id}
               onClick={() => handleServiceSelection(servico._id)}
               className={`p-4 border rounded-lg cursor-pointer ${selectedService === servico._id ? 'bg-blue-100' : ''}`}
             >
-              <h3 className="font-medium">{servico.nome}</h3>
+              <h3 className="font-medium text-lg">{servico.nome}</h3>
               <p className="text-sm text-gray-600">{servico.descricao}</p>
             </div>
           ))}
@@ -146,7 +153,7 @@ export default function Agendar({ horarios, servicos }) {
             onClick={() => sliderRef.current.slickPrev()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            &laquo;	Anterior
+            &laquo; Anterior
           </button>
           <button
             onClick={() => sliderRef.current.slickNext()}
@@ -173,14 +180,14 @@ export default function Agendar({ horarios, servicos }) {
       {selectedDate && (
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-2">Selecione um Horário</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {horariosDisponiveis
               .filter(horario => new Date(horario.data).toDateString() === selectedDate)
               .map(horario => (
                 <div
                   key={horario._id}
                   onClick={() => handleTimeSelection(horario._id)}
-                  className={`p-2 border rounded-lg cursor-pointer ${selectedTime === horario._id ? 'bg-blue-100' : ''}`}
+                  className={`p-2 border rounded-lg cursor-pointer text-center ${selectedTime === horario._id ? 'bg-blue-100' : ''}`}
                 >
                   {new Date(horario.data).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
