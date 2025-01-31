@@ -48,7 +48,7 @@ export default function Admin({ agendamentos, horarios, servicos }) {
     for (let i = 0; i < dias; i++) {
       const novaData = new Date(dataSelecionada);
       novaData.setDate(dataSelecionada.getDate() + i * 7); // Adiciona semanas mantendo o mesmo dia da semana
-  
+
       const dataFormatada = novaData.toISOString().split("T")[0]; // Formato YYYY-MM-DD
   
       horariosParaAdicionar.push({

@@ -121,6 +121,26 @@ export default function Agendar({ horarios, servicos }) {
       .map(date => date.toDateString());
   };
 
+  // Função para classificar os horários em Manhã, Tarde e Noite
+  const classificarHorarios = (horarios) => {
+    const manha = [];
+    const tarde = [];
+    const noite = [];
+
+    horarios.forEach(horario => {
+      const hora = new Date(horario.data).getHours();
+      if (hora >= 6 && hora < 12) {
+        manha.push(horario);
+      } else if (hora >= 12 && hora < 18) {
+        tarde.push(horario);
+      } else {
+        noite.push(horario);
+      }
+    });
+
+    return { manha, tarde, noite };
+  };
+
   // Obter as datas únicas e ordenadas
   const datasOrdenadas = ordenarDatas([...new Set(horariosDisponiveis.map(h => new Date(h.data).toDateString()))]);
 
@@ -180,18 +200,23 @@ export default function Agendar({ horarios, servicos }) {
       {selectedDate && (
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-2">Selecione um Horário</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {horariosDisponiveis
-              .filter(horario => new Date(horario.data).toDateString() === selectedDate)
-              .map(horario => (
-                <div
-                  key={horario._id}
-                  onClick={() => handleTimeSelection(horario._id)}
-                  className={`p-2 border rounded-lg cursor-pointer text-center ${selectedTime === horario._id ? 'bg-blue-100' : ''}`}
-                >
-                  {new Date(horario.data).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          <div className="space-y-4">
+            {Object.entries(classificarHorarios(horariosDisponiveis.filter(horario => new Date(horario.data).toDateString() === selectedDate))).map(([periodo, horariosPeriodo]) => (
+              <div key={periodo}>
+                <h3 className="text-md font-semibold mb-2">{periodo.charAt(0).toUpperCase() + periodo.slice(1)}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {horariosPeriodo.map(horario => (
+                    <div
+                      key={horario._id}
+                      onClick={() => handleTimeSelection(horario._id)}
+                      className={`p-2 border rounded-lg cursor-pointer text-center ${selectedTime === horario._id ? 'bg-blue-100' : ''}`}
+                    >
+                      {new Date(horario.data).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       )}
