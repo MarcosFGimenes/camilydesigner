@@ -7,7 +7,6 @@ import Servico from "../models/Servico";
 import Link from "next/link";
 
 export default function Admin({ agendamentos, horarios, servicos }) {
-  
   const [pagina, setPagina] = useState("agendamentos");
   const [agendamentosList, setAgendamentosList] = useState(agendamentos);
   const [horariosList, setHorariosList] = useState(horarios);
@@ -17,6 +16,8 @@ export default function Admin({ agendamentos, horarios, servicos }) {
   const [editandoServico, setEditandoServico] = useState(null);
   const [nomeServico, setNomeServico] = useState("");
   const [descricaoServico, setDescricaoServico] = useState("");
+  const [horariosSelecionados, setHorariosSelecionados] = useState([]);
+  const [dataDestino, setDataDestino] = useState("");
 
   const marcarConcluido = async (id) => {
     await axios.post("/api/concluir", { id });
@@ -30,39 +31,99 @@ export default function Admin({ agendamentos, horarios, servicos }) {
 
   const adicionarHorario = async (e) => {
     e.preventDefault();
-    const response = await axios.post("/api/criarHorario", { data, hora });
-    setHorariosList([...horariosList, response.data.horario]);
-    setData("");
-    setHora("");
+  
+    // Cria a data com a hora selecionada
+    const dataHora = new Date(`${data}T${hora}:00`);
+    const fusoHorario = "America/Sao_Paulo"; // Fuso horário de São Paulo
+  
+    // Ajusta a data para garantir que está no fuso horário de São Paulo
+    const dataHoraAjustada = new Date(dataHora.toLocaleString("en-US", { timeZone: fusoHorario }));
+  
+    // Converte para ISO 8601 (UTC) para o backend
+    const dataHoraISO = dataHoraAjustada.toISOString();
+  
+    console.log("Dados enviados:", { data: dataHoraISO }); // Log para depuração
+  
+    try {
+      const response = await axios.post("/api/criarHorario", { data: dataHoraISO });
+      console.log("Resposta do backend:", response.data); // Log para depuração
+  
+      setHorariosList([...horariosList, response.data.horario]);
+      setData("");
+      setHora("");
+    } catch (error) {
+      console.error("Erro ao adicionar horário:", error.response ? error.response.data : error.message); // Log detalhado
+      alert("Erro ao adicionar horário. Verifique o console.");
+    }
   };
- 
-  const adicionarHorariosParaProximosDias = async (dias) => {
-    if (!hora || !data) {
-      alert("Selecione uma data e um horário antes de adicionar.");
+  
+  const copiarHorariosParaData = async () => {
+    if (!dataDestino || horariosSelecionados.length === 0) {
+      alert("Selecione uma data e pelo menos um horário para copiar.");
       return;
     }
   
-    const dataSelecionada = new Date(data);
-    const horariosParaAdicionar = [];
+    const horariosParaAdicionar = horariosSelecionados.map((horario) => {
+      const dataHoraOriginal = new Date(horario.data);
   
-    for (let i = 0; i < dias; i++) {
-      const novaData = new Date(dataSelecionada);
-      novaData.setDate(dataSelecionada.getDate() + i * 7); // Adiciona semanas mantendo o mesmo dia da semana
-
-      const dataFormatada = novaData.toISOString().split("T")[0]; // Formato YYYY-MM-DD
+      // Cria a nova data com o mesmo horário, mas na data de destino
+      const dataHoraDestino = new Date(dataDestino);
+      dataHoraDestino.setHours(dataHoraOriginal.getHours());
+      dataHoraDestino.setMinutes(dataHoraOriginal.getMinutes());
+      dataHoraDestino.setSeconds(dataHoraOriginal.getSeconds());
+      dataHoraDestino.setMilliseconds(dataHoraOriginal.getMilliseconds());
   
-      horariosParaAdicionar.push({
-        data: `${dataFormatada}T${hora}:00`, // Mantém formato ISO 8601
-        hora: hora,
-      });
-    }
+      // Usando a função toLocaleString para lidar com o fuso horário local
+      const fusoHorario = "America/Sao_Paulo"; // Fuso horário de São Paulo
+      const dataHoraISO = new Date(dataHoraDestino.toLocaleString('en-US', { timeZone: fusoHorario }));
+  
+      return {
+        data: dataHoraISO.toISOString(),
+      };
+    });
   
     try {
       const response = await axios.post("/api/criarHorarios", {
         horarios: horariosParaAdicionar,
       });
   
-      setHorariosList([...horariosList, ...response.data.horarios]); // Atualiza a lista corretamente
+      setHorariosList([...horariosList, ...response.data.horarios]);
+      setHorariosSelecionados([]);
+      setDataDestino("");
+      alert("Horários copiados com sucesso!");
+    } catch (error) {
+      console.error("Erro ao copiar horários:", error);
+      alert("Erro ao copiar horários. Verifique o console.");
+    }
+  };
+  
+  const adicionarHorariosParaProximosDias = async (dias) => {
+    if (!hora || !data) {
+      alert("Selecione uma data e um horário antes de adicionar.");
+      return;
+    }
+
+    const dataSelecionada = new Date(`${data}T${hora}:00`);
+    const horariosParaAdicionar = [];
+
+    for (let i = 0; i < dias; i++) {
+      const novaData = new Date(dataSelecionada);
+      novaData.setDate(dataSelecionada.getDate() + i); // Adiciona um dia por vez, sem pular semanas
+
+      // Converte para ISO 8601 (UTC)
+      const dataHoraISO = novaData.toISOString();
+
+      horariosParaAdicionar.push({
+        data: dataHoraISO,
+      });
+    }
+
+    try {
+      const response = await axios.post("/api/criarHorarios", {
+        horarios: horariosParaAdicionar,
+      });
+
+      setHorariosList([...horariosList, ...response.data.horarios]);
       setData("");
       setHora("");
       alert("Horários adicionados com sucesso!");
@@ -71,7 +132,6 @@ export default function Admin({ agendamentos, horarios, servicos }) {
       alert("Erro ao adicionar horários. Verifique o console.");
     }
   };
-  
 
   const adicionarServico = async (nome, descricao) => {
     const response = await axios.post("/api/adicionarServico", { nome, descricao });
@@ -160,44 +220,80 @@ export default function Admin({ agendamentos, horarios, servicos }) {
             <ul>
               {horariosList.map((horario) => (
                 <li key={horario._id} className="border-b py-2 flex justify-between items-center">
-                  <span>{new Date(horario.data).toLocaleString()}</span>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={horariosSelecionados.some((h) => h._id === horario._id)}
+                      onChange={() => {
+                        if (horariosSelecionados.some((h) => h._id === horario._id)) {
+                          setHorariosSelecionados(horariosSelecionados.filter((h) => h._id !== horario._id));
+                        } else {
+                          setHorariosSelecionados([...horariosSelecionados, horario]);
+                        }
+                      }}
+                      className="mr-2"
+                    />
+                    <span>{new Date(horario.data).toLocaleString()}</span>
+                  </label>
                   <button className="bg-red-500 text-white px-3 py-1 rounded-md" onClick={() => deletarHorario(horario._id)}>Deletar</button>
                 </li>
               ))}
             </ul>
+
+            {/* Formulário para copiar horários */}
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2">Copiar Horários para uma Nova Data</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dataDestino}
+                  onChange={(e) => setDataDestino(e.target.value)}
+                  required
+                  className="border p-2 rounded"
+                />
+                <button
+                  onClick={copiarHorariosParaData}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-md"
+                >
+                  Copiar horários para o dia: {dataDestino}
+                </button>
+              </div>
+            </div>
+
+            {/* Formulário para adicionar novos horários */}
             <form onSubmit={adicionarHorario} className="mt-4">
-  <input
-    type="date"
-    value={data}
-    onChange={(e) => setData(e.target.value)}
-    required
-    className="border p-2 rounded w-full mb-2"
-  />
-  <input
-    type="time"
-    value={hora}
-    onChange={(e) => setHora(e.target.value)}
-    required
-    className="border p-2 rounded w-full mb-2"
-  />
-  <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md">
-    Adicionar
-  </button>
-  <button
-    type="button"
-    onClick={() => adicionarHorariosParaProximosDias(30)}
-    className="bg-green-500 text-white px-4 py-2 rounded-md ml-2"
-  >
-    Adicionar para os próximos 30 dias
-  </button>
-  <button
-    type="button"
-    onClick={() => adicionarHorariosParaProximosDias(60)}
-    className="bg-green-500 text-white px-4 py-2 rounded-md ml-2"
-  >
-    Adicionar para os próximos 60 dias
-  </button>
-</form>
+              <input
+                type="date"
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                required
+                className="border p-2 rounded w-full mb-2"
+              />
+              <input
+                type="time"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                required
+                className="border p-2 rounded w-full mb-2"
+              />
+              <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md">
+                Adicionar
+              </button>
+              <button
+                type="button"
+                onClick={() => adicionarHorariosParaProximosDias(30)}
+                className="bg-green-500 text-white px-4 py-2 rounded-md ml-2"
+              >
+                Adicionar para os próximos 30 dias
+              </button>
+              <button
+                type="button"
+                onClick={() => adicionarHorariosParaProximosDias(60)}
+                className="bg-green-500 text-white px-4 py-2 rounded-md ml-2"
+              >
+                Adicionar para os próximos 60 dias
+              </button>
+            </form>
           </section>
         )}
 
@@ -242,7 +338,7 @@ export default function Admin({ agendamentos, horarios, servicos }) {
 
 export async function getServerSideProps() {
   await dbConnect();
-  
+
   const agendamentos = await Agendamento.find({ concluido: false }).populate("horario").populate("servico").sort({ "horario.data": 1 }) || [];
   const horarios = await Horario.find({ disponivel: true }) || [];
   const servicos = await Servico.find({}) || [];

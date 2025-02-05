@@ -1,4 +1,3 @@
-// pages/api/criarHorarios.js
 import dbConnect from "../../lib/mongoose";
 import Horario from "../../models/Horario";
 
@@ -14,13 +13,13 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, message: "Nenhum horário fornecido." });
       }
 
-      // Valida e converte as datas para UTC
+      // Valida e converte as datas para objetos Date
       const horariosValidados = horarios.map((horario) => {
-        const dataHora = new Date(horario.data);
-        if (isNaN(dataHora)) {
+        const dataHoraUTC = new Date(horario.data);
+        if (isNaN(dataHoraUTC)) {
           throw new Error("Formato de data inválido: " + horario.data);
         }
-        return { ...horario, data: dataHora.toISOString() };
+        return { ...horario, data: dataHoraUTC };
       });
 
       // Cria os horários no banco de dados
