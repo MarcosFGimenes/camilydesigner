@@ -8,6 +8,8 @@ import { useRouter } from 'next/router';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
+import Agendamento from "../../models/Agendamento";
+import { getSocket } from "./server/socketServer";
 
 export default function Agendar({ horarios, servicos }) {
   const { register, handleSubmit } = useForm();
@@ -264,4 +266,41 @@ export async function getServerSideProps() {
       servicos: JSON.parse(JSON.stringify(servicos)),
     },
   };
+}
+
+// Renomeie 'handler' para uma exportação nomeada
+export async function handler(req, res) {
+  await dbConnect();
+  
+  if (req.method === "POST") {
+    try {
+      const { nome, contato, servico, metodoPagamento, horario } = req.body;
+
+      // Atualiza o horário para indisponível
+      await Horario.findByIdAndUpdate(horario, { disponivel: false });
+
+      const agendamento = new Agendamento({
+        nome,
+        contato,
+        servico,
+        metodoPagamento,
+        horario,
+        concluido: false,
+      });
+
+      await agendamento.save();
+
+      // Notifica os admins em tempo real
+      const io = getSocket();
+      if (io) {
+        io.emit("novoAgendamento", agendamento);
+      }
+
+      res.status(201).json({ success: true, agendamento });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  } else {
+    res.status(405).json({ message: "Método não permitido" });
+  }
 }

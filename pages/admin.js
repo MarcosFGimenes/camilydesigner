@@ -5,6 +5,9 @@ import Agendamento from "../models/Agendamento";
 import Horario from "../models/Horario";
 import Servico from "../models/Servico";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import io from "socket.io-client";
 
 export default function Admin({ agendamentos, horarios, servicos }) {
   const [pagina, setPagina] = useState("agendamentos");
@@ -350,4 +353,31 @@ export async function getServerSideProps() {
       servicos: JSON.parse(JSON.stringify(servicos)),
     },
   };
-}
+  const socket = io("http://localhost:3000"); // Ajuste para a URL do seu servidor em produção
+} 
+  export default function Admin({ agendamentos }) {
+  const [agendamentosList, setAgendamentosList] = useState(agendamentos);
+
+  useEffect(() => {
+    // Escuta novos agendamentos em tempo real
+    socket.on("novoAgendamento", (novoAgendamento) => {
+      setAgendamentosList((prev) => [...prev, novoAgendamento]);
+    });
+
+    return () => {
+      socket.off("novoAgendamento");
+    };
+  }, []);
+
+  return (
+    <div>
+      <h2>Agendamentos</h2>
+      <ul>
+        {agendamentosList.map((agendamento) => (
+          <li key={agendamento._id}>
+            {agendamento.nome} - {agendamento.servico}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ); }
