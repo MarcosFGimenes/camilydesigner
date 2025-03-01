@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import Agendamento from "../../models/Agendamento";
+import Agendamento from "../models/Agendamento";
 import { getSocket } from "./server/socketServer";
 
 export default function Agendar({ horarios, servicos }) {
